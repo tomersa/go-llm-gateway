@@ -84,6 +84,18 @@ func checkHealth() {
 	io.Copy(os.Stdout, resp.Body)
 }
 
+func checkMetrics() {
+	resp, err := http.Get("http://localhost:8080/metrics")
+	if err != nil {
+		fmt.Println("Failed to reach /metrics endpoint:", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	fmt.Println("Status:", resp.Status)
+	fmt.Println("Response:")
+	io.Copy(os.Stdout, resp.Body)
+}
+
 func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "client",
@@ -118,6 +130,15 @@ func main() {
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(healthCmd)
+
+	var metricsCmd = &cobra.Command{
+		Use:   "metrics",
+		Short: "Show basic usage statistics from the server",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkMetrics()
+		},
+	}
+	rootCmd.AddCommand(metricsCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

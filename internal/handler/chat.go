@@ -13,6 +13,9 @@ import (
 	"github.com/tomersa/llm-gateway/internal/provider"
 )
 
+// import metrics
+
+
 func HandleChat(w http.ResponseWriter, request *http.Request) {
 	start := time.Now()
 
@@ -61,7 +64,9 @@ func HandleChat(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	logInteraction(vk, info.Provider, request.Method, resp.StatusCode, time.Since(start), bodyBytes, responseBody)
+	duration := time.Since(start)
+	metrics.Add(info.Provider, duration.Milliseconds())
+	logInteraction(vk, info.Provider, request.Method, resp.StatusCode, duration, bodyBytes, responseBody)
 
 	w.WriteHeader(resp.StatusCode)
 	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))

@@ -21,6 +21,7 @@ func Run() error {
 
 	r.Post("/chat/completions", handler.HandleChat)
 	r.Get("/health", handler.HandleHealth)
+	r.Get("/metrics", handler.HandleMetrics)
 
 	log.Println("Server listening on :8080")
 	return http.ListenAndServe(":8080", r)
