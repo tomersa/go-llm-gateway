@@ -55,7 +55,6 @@ func HandleChat(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	io.Copy(w, resp.Body)
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Internal Server Error: %s", err), http.StatusInternalServerError)
@@ -66,6 +65,7 @@ func HandleChat(w http.ResponseWriter, request *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+	w.Write(responseBody)
 	resp.Body.Close()
 }
 
