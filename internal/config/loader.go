@@ -22,6 +22,8 @@ func LoadConfig(path string) error {
 	return nil
 }
 
+// Note: Looking back I would use go:embed here but already implemented it like this. I did use go:embed in the aiservices.json though.
+
 func readConfigFromFile(path string) (map[string]ProviderInfo, error) {
 	f, err := os.Open(path)
 	if err != nil {

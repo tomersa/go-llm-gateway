@@ -72,6 +72,18 @@ func runWithKey(virtualKey string) {
 	io.Copy(os.Stdout, resp.Body)
 }
 
+func checkHealth() {
+	resp, err := http.Get("http://localhost:8080/health")
+	if err != nil {
+		fmt.Println("Failed to reach /health endpoint:", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	fmt.Println("Status:", resp.Status)
+	fmt.Println("Response:")
+	io.Copy(os.Stdout, resp.Body)
+}
+
 func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "client",
@@ -95,8 +107,17 @@ func main() {
 		},
 	}
 
+	var healthCmd = &cobra.Command{
+		Use:   "health",
+		Short: "Check the health status of all configured AI providers",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkHealth()
+		},
+	}
+
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(listCmd)
+	rootCmd.AddCommand(healthCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

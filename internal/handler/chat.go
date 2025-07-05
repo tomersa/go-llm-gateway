@@ -2,16 +2,20 @@ package handler
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/tomersa/llm-gateway/internal/config"
 	"github.com/tomersa/llm-gateway/internal/provider"
 )
 
 func HandleChat(w http.ResponseWriter, request *http.Request) {
+	start := time.Now()
+
 	vk, err := extractVirtualKey(request.Header.Get("Authorization"))
 	if err != nil {
 		http.Error(w, "Failed to extract virtual key", http.StatusBadRequest)
@@ -51,9 +55,17 @@ func HandleChat(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	io.Copy(w, resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Internal Server Error: %s", err), http.StatusInternalServerError)
+		return
+	}
+
+	logInteraction(vk, info.Provider, request.Method, resp.StatusCode, time.Since(start), bodyBytes, responseBody)
+
 	w.WriteHeader(resp.StatusCode)
 	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-	io.Copy(w, resp.Body)
 	resp.Body.Close()
 }
 
@@ -63,4 +75,24 @@ func extractVirtualKey(authHeader string) (string, error) {
 		return parts[1], nil
 	}
 	return "", fmt.Errorf("invalid authorization header")
+}
+
+func logInteraction(virtualKey, provider, method string, status int, duration time.Duration, req, resp []byte) {
+	logData := map[string]interface{}{
+		"timestamp":   time.Now().UTC().Format(time.RFC3339),
+		"virtual_key": virtualKey,
+		"provider":    provider,
+		"method":      method,
+		"status":      status,
+		"duration_ms": duration.Milliseconds(),
+		"request":     json.RawMessage(req),
+		"response":    json.RawMessage(resp),
+	}
+	logJSON, err := json.MarshalIndent(logData, "", "  ")
+	if err != nil {
+		fmt.Printf("failed to marshal log data: %v", err)
+		return
+	}
+
+	fmt.Println(string(logJSON))
 }

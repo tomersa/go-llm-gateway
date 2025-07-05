@@ -20,6 +20,7 @@ func Run() error {
 	r := chi.NewRouter()
 
 	r.Post("/chat/completions", handler.HandleChat)
+	r.Get("/health", handler.HandleHealth)
 
 	log.Println("Server listening on :8080")
 	return http.ListenAndServe(":8080", r)
