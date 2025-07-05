@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,18 +24,28 @@ func HandleChat(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	var aiService provider.AiService
-	switch info.Provider {
-	case "openai":
-		aiService = provider.OpenAI{}
-	case "anthropic":
-		aiService = provider.Anthropic{}
-	default:
+	aiServiceEndpoint, ok := provider.AiServiceEndpoints[info.Provider]
+	if !ok {
 		http.Error(w, fmt.Sprintf("Unsupported provider: %s", info.Provider), http.StatusBadRequest)
 		return
 	}
 
-	resp, err := aiService.HandleRequest(info.APIKey, request.Body, request)
+	bodyBytes, err := io.ReadAll(request.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Internal Server Error: %s", err), http.StatusInternalServerError)
+		return
+	}
+	request.Body.Close() //  must close
+	request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	req, err := http.NewRequest("POST", aiServiceEndpoint, request.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Internal Server Error: %s", err), http.StatusInternalServerError)
+		return
+	}
+	req.Header = request.Header.Clone()
+	req.Header.Set("Authorization", "Bearer "+info.APIKey)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Internal Server Error: %s", err), http.StatusInternalServerError)
 		return
@@ -43,6 +54,7 @@ func HandleChat(w http.ResponseWriter, request *http.Request) {
 	w.WriteHeader(resp.StatusCode)
 	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
 	io.Copy(w, resp.Body)
+	resp.Body.Close()
 }
 
 func extractVirtualKey(authHeader string) (string, error) {

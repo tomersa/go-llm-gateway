@@ -1,10 +1,19 @@
 package provider
 
 import (
-	"io"
-	"net/http"
+	_ "embed"
+	"encoding/json"
 )
 
-type AiService interface {
-	HandleRequest(apiKey string, bodyReader io.Reader, r *http.Request) (*http.Response, error)
+//go:embed aiservices.json
+var aiservicesRaw []byte
+
+var AiServiceEndpoints map[string]string
+
+func init() {
+	AiServiceEndpoints = make(map[string]string)
+	// fill up the init function to load the aiservices.json file
+	if err := json.Unmarshal(aiservicesRaw, &AiServiceEndpoints); err != nil {
+		panic("failed to unmarshal aiservices.json: " + err.Error())
+	}
 }
